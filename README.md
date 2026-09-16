@@ -35,6 +35,7 @@ REC4MIT/
 │   └── layer3.py                 # 사건 감지 / 사건 전이 / 다음 뉴스 예측
 │
 ├── DataPreperation/
+│   ├── dataPipeline.py           # 아래 3개 스크립트를 순서대로 실행하는 통합 파이프라인
 │   ├── make_emb.py               # 뉴스 제목·본문 → BERT 임베딩 (.npz)
 │   ├── make_interaction.py       # 뉴스 CSV → 사용자별 열람 시퀀스 (.json)
 │   ├── interaction2instance.py   # 시퀀스 → 학습 인스턴스 + 10-fold 분할
@@ -76,18 +77,15 @@ GPU가 있으면 자동으로 CUDA를 사용하고, 없으면 CPU로 동작합�
 
 ## 3. 실행 순서 (빠른 시작)
 
-모든 명령은 **저장소 루트**에서 실행합니다. 단, 데이터 전처리 스크립트는 `DataPreperation/` 안에서 실행합니다.
+모든 명령은 **저장소 루트**에서 실행합니다.
 
 ```bash
-# ① 데이터 전처리 (DataPreperation 폴더 안에서)
-cd DataPreperation
-python make_emb.py                          # 뉴스 임베딩 생성
-python make_interaction.py                  # 사용자 열람 시퀀스 생성
-python interaction2instance.py --data pol   # 인스턴스 생성 + 10-fold 분할
-python interaction2instance.py --data gossip
-cd ..
+# ① 데이터 전처리 (통합 파이프라인, 3단계 순서대로 실행)
+python DataPreperation/dataPipeline.py                       # gossip + pol, 전체 단계
+python DataPreperation/dataPipeline.py --data pol            # pol 만
+python DataPreperation/dataPipeline.py --steps interaction instance   # 임베딩 생략
 
-# ② 학습 (루트에서)
+# ② 학습
 python train.py --data pol --fold_num 1     # fold 0 만 학습
 python train.py --data pol --fold_num 10    # fold 0~9 전부 학습
 
@@ -99,6 +97,13 @@ python test.py --data gossip --batch 16     # gossip은 뉴스 풀이 커서 배
 ---
 
 ## 4. 데이터 파이프라인
+
+`dataPipeline.py` 하나로 아래 3단계를 순서대로 실행합니다. 개별 스크립트(`make_interaction.py`, `interaction2instance.py`, `make_emb.py`)도 그대로 남아 있으며, 이 셋은 `DataPreperation/` 안에서 실행해야 합니다.
+
+| 인자 | 기본값 | 설명 |
+|---|---|---|
+| `--data` | `gossip pol` | 처리할 데이터셋 (여러 개 가능) |
+| `--steps` | `interaction instance emb` | 실행할 단계 (여러 개 가능) |
 
 ### 4-1. 원본 데이터 형식 (`datas/news/{pol,gossip}.csv`)
 
@@ -302,6 +307,6 @@ REC@5    0.xxxx ± 0.0000
 - **뉴스 내부번호 규칙**: `news.csv` 행 순서 = 임베딩 행 순서 = 내부번호 − 1. 0번은 패딩입니다. CSV 순서를 바꾸면 임베딩과 어긋나므로 주의하세요.
 - **사용자 인덱스 규칙**: 학습과 평가 모두 fold 0의 전체 사용자 집합을 정렬해 인덱스를 만듭니다. 결정적이므로 두 스크립트가 같은 `u2i`를 얻습니다.
 - **정답이 가짜인 인스턴스 제외**: 학습·평가 모두 정답 뉴스가 진짜인 인스턴스만 사용합니다. 가짜뉴스는 추천 대상이 아니기 때문입니다.
-- **전처리 스크립트 실행 위치**: `DataPreperation/` 안의 스크립트는 상대경로 `datas/...`를 사용하므로 그 폴더 안에서 실행해야 합니다.
+- **전처리 스크립트 실행 위치**: `dataPipeline.py`는 어디서 실행해도 됩니다. 개별 스크립트 3개는 상대경로 `datas/...`를 사용하므로 `DataPreperation/` 안에서 실행해야 합니다.
 - **`layer2.py`의 `from mpmath import sigmoid`**: 사용되지 않는 import입니다. `mpmath`가 없는 환경이면 지워도 됩니다.
 - **OpenMP 중복 경고** (Windows): `OMP: Error #15`가 뜨면 환경변수 `KMP_DUPLICATE_LIB_OK=TRUE`를 설정하면 넘어갈 수 있습니다.
