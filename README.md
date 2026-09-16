@@ -1,6 +1,7 @@
 <h1 align="center">Rec4Mit</h1>
 
-<p align="center">가짜뉴스 확산을 완화하는 뉴스 추천 모델, <b>PyTorch</b> 구현.</p>
+<p align="center">가짜뉴스 확산을 완화하는 뉴스 추천 모델 <b>PyTorch</b> 구현.</p>
+논문 -> c:\Users\USER\Desktop\졸프_데이터\논문\11_[WWW'22] Veracity-aware and Event-driven Personalized News Recommendation for Fake News Mitigation.pdf
 
 <p align="center">
 <img alt="Python" src="https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white">
@@ -18,7 +19,9 @@ Rec4Mit은 사용자의 최근 뉴스 열람 이력을 보고 <b>다음에 읽�
 사건 흐름을 따라가며 <b>진짜 뉴스만</b> 추천 목록에 올립니다.
 </p>
 
+
 <hr>
+
 
 ![alt text](image.png)
 
