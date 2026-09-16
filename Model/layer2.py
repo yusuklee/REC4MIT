@@ -77,8 +77,8 @@ class DisentangleLoss(nn.Module):
         adv_err = F.binary_cross_entropy_with_logits(adv_logit, y, reduction="none")
         loss_a = 1.0 / adv_err.clamp(min=1e-6)      # 논문 Eq 11 식
 
-        # Eq 12 — 합 (mask 있으면 패딩 자리 빼고 평균)
-        losses = loss_l  # +loss_a +loss_r
+        # Eq 12 — 합
+        losses = loss_l +loss_r # +loss_a
         if mask is not None:
             total = (losses * mask).sum() / mask.sum().clamp(min=1)
         else:

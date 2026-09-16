@@ -1,308 +1,213 @@
-# Rec4Mit — 가짜뉴스 확산 완화를 위한 뉴스 추천 모델 재현
+<h1 align="center">Rec4Mit</h1>
 
-사용자의 최근 뉴스 열람 이력을 보고 **다음에 읽을 뉴스를 추천**하되, **가짜뉴스는 추천 목록에서 걸러내는** 모델입니다.
-뉴스 벡터를 **사건(event) 표현**과 **진위(veracity) 표현**으로 분리(disentangle)하고, 사건 흐름을 따라가며 진짜 뉴스만 추천합니다.
+<p align="center">가짜뉴스 확산을 완화하는 뉴스 추천 모델, <b>PyTorch</b> 구현.</p>
 
-데이터셋은 FakeNewsNet(PolitiFact, GossipCop)을 사용합니다.
+<p align="center">
+<img alt="Python" src="https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white">
+<img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.10-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white">
+<img alt="Dataset" src="https://img.shields.io/badge/Dataset-FakeNewsNet-4B5563?style=for-the-badge">
+</p>
 
----
+<p align="center">
+<a href="#quick-start">빠른 시작</a> · <a href="#structure">폴더 구조</a> · <a href="#dataset">데이터셋</a> · <a href="#model">모델</a> · <a href="https://github.com/KaiDMML/FakeNewsNet" target="_blank">FakeNewsNet</a>
+</p>
 
-## 목차
+<p align="center">
+Rec4Mit은 사용자의 최근 뉴스 열람 이력을 보고 <b>다음에 읽을 뉴스를 추천</b>합니다.<br>
+뉴스 벡터를 <b>사건(event) 표현</b>과 <b>진위(veracity) 표현</b>으로 분리한 뒤,<br>
+사건 흐름을 따라가며 <b>진짜 뉴스만</b> 추천 목록에 올립니다.
+</p>
 
-1. [폴더 구조](#1-폴더-구조)
-2. [환경 설정](#2-환경-설정)
-3. [실행 순서 (빠른 시작)](#3-실행-순서-빠른-시작)
-4. [데이터 파이프라인](#4-데이터-파이프라인)
-5. [모델 구조](#5-모델-구조)
-6. [학습 (train.py)](#6-학습-trainpy)
-7. [평가 (test.py)](#7-평가-testpy)
-8. [데이터 통계](#8-데이터-통계)
-9. [참고 사항 및 주의점](#9-참고-사항-및-주의점)
+<hr>
 
----
+<h2 align="center">특징</h2>
 
-## 1. 폴더 구조
+<table align="center">
+  <tr>
+    <td><b>분리 표현 학습</b></td>
+    <td>뉴스 하나를 사건 표현과 진위 표현으로 나눠 학습합니다</td>
+  </tr>
+  <tr>
+    <td><b>사건 전이 추적</b></td>
+    <td>최근 4개 뉴스의 사건 흐름을 attention으로 요약해 다음 사건을 예측합니다</td>
+  </tr>
+  <tr>
+    <td><b>가짜뉴스 필터링</b></td>
+    <td>진위 디코더가 가짜로 판단한 후보는 추천에서 제외합니다</td>
+  </tr>
+  <tr>
+    <td><b>10-fold 평가</b></td>
+    <td>REC, MRR, NDCG, RT(진짜 뉴스 비율) 지표로 fold 평균을 냅니다</td>
+  </tr>
+  <tr>
+    <td><b>한 줄 전처리</b></td>
+    <td>뉴스 CSV 2개만 있으면 명령 하나로 데이터가 전부 생성됩니다</td>
+  </tr>
+</table>
 
-```
-REC4MIT/
-├── main.py                       # Rec4Mit 모델 조립 (레이어 1~3 연결)
-├── train.py                      # 학습 스크립트 (fold별 체크포인트 저장)
-├── test.py                       # 평가 스크립트 (REC / MRR / NDCG / RT)
+<hr>
+
+<h2 align="center" id="quick-start">빠른 시작</h2>
+
+<h3>1. 설치</h3>
+
+<pre><code>pip install -r requirements.txt</code></pre>
+
+<h3>2. 데이터 준비</h3>
+
+<p>저장소에 포함된 <code>news.zip</code>을 같은 자리에 풉니다.</p>
+
+<pre><code>DataPreperation/datas/news/gossip.csv
+DataPreperation/datas/news/pol.csv</code></pre>
+
+<p>그다음 전처리 파이프라인을 실행합니다.</p>
+
+<pre><code>python DataPreperation/dataPipeline.py</code></pre>
+
+<h3>3. 학습</h3>
+
+<pre><code>python train.py --data pol --fold_num 1        # politifact fold 1개만 학습
+python train.py --data gossip --fold_num 10    # gossipcop fold 10개 모두 학습</code></pre>
+
+<h3>4. 평가</h3>
+
+<pre><code>python test.py --data pol
+python test.py --data gossip --batch 32        # --batch 기본값 32</code></pre>
+
+<hr>
+
+<h2 align="center" id="structure">폴더 구조</h2>
+
+<pre><code>REC4MIT/
+├── rec4mit.py                    # 레이어 1~3을 합친 Rec4Mit 모델
+├── requirements.txt              # 의존 패키지
+├── train.py                      # 학습
+├── test.py                       # 평가
 │
 ├── Model/
-│   ├── layer1.py                 # 뉴스 임베딩 레이어 (ID + BERT 메타 임베딩)
-│   ├── layer2.py                 # 인코더 / 사건·진위 디코더 / 분리 손실
-│   └── layer3.py                 # 사건 감지 / 사건 전이 / 다음 뉴스 예측
+│   ├── layer1.py                 # 논문의 임베딩 층
+│   ├── layer2.py                 # 분리층
+│   └── layer3.py                 # 사건감지, 예측 층
 │
 ├── DataPreperation/
-│   ├── dataPipeline.py           # 데이터 전처리 통합 파이프라인 (시퀀스 → 인스턴스/fold → 임베딩)
+│   ├── dataPipeline.py           # 전처리
 │   └── datas/
-│       ├── news/                 # 원본 뉴스 CSV (gossip.csv, pol.csv)  ※ git 제외
-│       ├── emb/                  # BERT 임베딩 (gossip.npz, pol.npz)     ※ git 제외
-│       ├── user_interaction/     # 사용자별 열람 시퀀스 JSON
-│       └── folds/{data}/{0~9}/   # train.json / val.json / test.json     ※ git 제외
+│       ├── news.zip              # 이 위치에서 해제
+│       ├── news/                 # 해제 시 생길 폴더
+│       ├── user_interaction/     # 유저 - [뉴스1, 뉴스2, ...] 식으로 재구성
+│       ├── folds/{data}/{0~9}/   # train / val / test 인스턴스 (10개의 fold)
+│       └── emb/                  # 뉴스 임베딩 (제목 + 설명)
 │
-└── model_dir/{data}/fold_{n}.pth # 학습된 체크포인트                      ※ git 제외
-```
-
-> `.gitignore`에 의해 대용량 파일(CSV, 임베딩, fold, 체크포인트)은 저장소에 포함되지 않습니다.
-> 저장소를 새로 받았다면 [4. 데이터 파이프라인](#4-데이터-파이프라인)을 따라 데이터를 직접 생성해야 합니다.
-
----
-
-## 2. 환경 설정
-
-### 요구 사항
-
-| 패키지 | 검증된 버전 | 용도 |
-|---|---|---|
-| Python | 3.13 | |
-| torch | 2.10.0 (cu128) | 모델 학습·추론 |
-| numpy | 2.3.5 | 수치 연산 |
-| pandas | 2.3.3 | CSV 처리 |
-| sentence-transformers | 5.6.0 | BERT 임베딩 생성 (`dataPipeline.py`의 emb 단계에서만 사용) |
-
-### 설치
-
-```bash
-pip install torch numpy pandas sentence-transformers
-```
-
-GPU가 있으면 자동으로 CUDA를 사용하고, 없으면 CPU로 동작합니다.
-
----
-
-## 3. 실행 순서 (빠른 시작)
-
-모든 명령은 **저장소 루트**에서 실행합니다.
-
-```bash
-# ① 데이터 전처리 (통합 파이프라인, 3단계 순서대로 실행)
-python DataPreperation/dataPipeline.py                       # gossip + pol, 전체 단계
-python DataPreperation/dataPipeline.py --data pol            # pol 만
-python DataPreperation/dataPipeline.py --steps interaction instance   # 임베딩 생략
-
-# ② 학습
-python train.py --data pol --fold_num 1     # fold 0 만 학습
-python train.py --data pol --fold_num 10    # fold 0~9 전부 학습
-
-# ③ 평가 (루트에서)
-python test.py --data pol
-python test.py --data gossip --batch 16     # gossip은 뉴스 풀이 커서 배치를 줄이는 것을 권장
-```
-
----
-
-## 4. 데이터 파이프라인
-
-`dataPipeline.py` 하나로 아래 3단계를 순서대로 실행합니다. 어느 위치에서 실행해도 되며, 경로는 파일 위치 기준으로 잡힙니다.
-
-| 인자 | 기본값 | 설명 |
-|---|---|---|
-| `--data` | `gossip pol` | 처리할 데이터셋 (여러 개 가능) |
-| `--steps` | `interaction instance emb` | 실행할 단계 (여러 개 가능) |
-
-### 4-1. 원본 데이터 형식 (`datas/news/{pol,gossip}.csv`)
-
-| 컬럼 | 설명 |
-|---|---|
-| `news_id` | 뉴스 고유 ID (예: `politifact12418`, `gossipcop-893510`) |
-| `title` | 뉴스 제목 |
-| `description` | 뉴스 본문 요약 |
-| `label` | `0` = 진짜, `1` = 가짜 |
-| `user_ids` | 해당 뉴스를 공유한 사용자 ID 리스트 (문자열로 저장된 파이썬 리스트) |
-| `user_times` | 각 사용자의 공유 시각 리스트 (`user_ids`와 순서 일치) |
-
-### 4-2. `make_interaction()` — 사용자별 열람 시퀀스 (interaction 단계)
-
-CSV의 `user_ids`·`user_times`를 풀어서 **사용자 → 시간순 뉴스 ID 리스트**로 재구성합니다.
-
-```json
-{ "2363305464": ["politifact674", "politifact12418", ...], ... }
-```
-
-출력: `datas/user_interaction/{data}_user_interaction.json`
-
-### 4-3. `interaction2instance()` — 학습 인스턴스 및 10-fold 분할 (instance 단계)
-
-각 사용자 시퀀스에서 **슬라이딩 윈도우**로 인스턴스를 만듭니다.
-
-```
-시퀀스: [n1, n2, n3, n4, n5, n6]
-        → (ctx=[n1],             tgt=n2)
-        → (ctx=[n1,n2],          tgt=n3)
-        → (ctx=[n1,n2,n3],       tgt=n4)
-        → (ctx=[n1,n2,n3,n4],    tgt=n5)
-        → (ctx=[n2,n3,n4,n5],    tgt=n6)   # 컨텍스트는 최근 4개까지
-```
-
-인스턴스 하나의 형식: `[ctx(리스트), tgt(문자열), uid(문자열)]`
-
-- 중복 인스턴스 제거 후 논문과 같은 개수로 자름 (pol 47,464 / gossip 136,004)
-- 시드 3으로 섞은 뒤 10등분
-- fold `k`: 청크 `k` = test, 청크 `(k+1)%10` = val, 나머지 8개 = train
-- 출력: `datas/folds/{data}/{k}/{train,val,test}.json`
-
-### 4-4. `make_emb()` — 뉴스 텍스트 임베딩 (emb 단계)
-
-- 모델: `bert-base-uncased` (sentence-transformers)
-- 제목은 최대 32 토큰, 본문은 최대 128 토큰으로 잘라서 인코딩
-- 제목이 비어 있으면 `"unknown news"`로 대체
-- 본문 길이가 5자 이하이면 0 벡터 처리
-- 출력: `datas/emb/{data}.npz`
-
-| 키 | 형태 | 설명 |
-|---|---|---|
-| `news_id` | `(N,)` | 뉴스 ID (CSV 행 순서와 동일) |
-| `title` | `(N, 768)` | 제목 임베딩 (L2 정규화) |
-| `description` | `(N, 768)` | 본문 임베딩 (L2 정규화) |
-
----
-
-## 5. 모델 구조
-
-`main.py`의 `Rec4Mit`이 아래 세 레이어를 순서대로 연결합니다.
-
-```
-뉴스 ID ──► [Layer 1] 임베딩 ──► [Layer 2] 인코더 ──┬─► 사건 표현 e (128)
-                                                    └─► 진위 표현 l (128) ─► 가짜 확률 ỹ
-                                                    
-컨텍스트 e ──► [Layer 3] 사건 감지 ─► 사건 전이 R ─► 사용자 결합 c_u ─► 후보 점수
-```
-
-### Layer 1 — `Model/layer1.py` 임베딩
-
-| 구성 | 설명 |
-|---|---|
-| `init_emb()` | `.npz`의 제목·본문 임베딩을 이어 붙여 `(N+1, 1536)` 행렬 생성. 0번 행은 패딩 |
-| `EmbeddingLayer` | 학습 가능한 ID 임베딩(128) + BERT 메타 임베딩(1536, 사전값으로 초기화) → Linear → 뉴스 벡터 `v` (256) |
-
-### Layer 2 — `Model/layer2.py` 분리(Disentangle)
-
-| 구성 | 입력 → 출력 | 설명 |
-|---|---|---|
-| `Encoder` | 256 → 256 | 3단 Dense + skip-connection, LeakyReLU(0.1) |
-| `EventDecoder` | 256 → 128 | 사건 표현 `e` |
-| `VeracityDecoder` | 256 → 128 (+ 로짓 1) | 진위 표현 `l`과 가짜 여부 로짓 (Eq 8) |
-| `DisentangleLoss` | | 아래 세 손실 계산 |
-
-`DisentangleLoss`가 계산하는 항목:
-
-| 손실 | 식 | 의미 |
-|---|---|---|
-| `L_r` | ½‖[e ; l] − v‖² | 재구성: 두 표현을 합치면 원래 뉴스 벡터가 복원돼야 함 (Eq 9) |
-| `L_l` | BCE(로짓, y) | 진위 표현으로 가짜 여부를 맞춰야 함 (Eq 10) |
-| `L_a` | 1 / BCE(Dense(e), y) | 적대 손실: 사건 표현 `e`로는 진위를 **못 맞춰야** 함 (Eq 11) |
-
-> **현재 코드는 `L_l`만 최종 손실에 포함합니다.** `L_r`, `L_a`는 계산은 되지만 합산에서 제외되어 있습니다(`layer2.py`의 `losses = loss_l` 줄). 세 항을 모두 쓰려면 해당 줄을 `loss_r + loss_l + loss_a`로 바꾸면 됩니다.
-
-### Layer 3 — `Model/layer3.py` 사건 전이 및 추천
-
-| 구성 | 설명 |
-|---|---|
-| `EventDetector` | `e`를 K=20개 잠재 사건으로 소프트 분배 (β = softmax(W1·e)) → `e_split` `[B, L, K, 128]` (Eq 13~14) |
-| `EventTransitionNet.build_R` | 위치 임베딩을 붙인 뒤 attention 가중치 γ로 컨텍스트를 합쳐 사건 전이 행렬 `R` `[B, K, 128]` 생성. 패딩 위치는 마스킹 (Eq 15~16) |
-| `EventTransitionNet.activate` | 후보 뉴스 `e_t`와 `R` 사이 attention δ → 문맥 벡터 `c` → 사용자 임베딩과 결합해 `c_u` (Eq 17~19) |
-| `NextNewsPredictor` | 점수 = `c_u · e_t` (내적) (Eq 20) |
-| `NextNewsPredictor.recommend` | 가짜 확률이 임계값 이상인 후보를 제외하고 top-k 반환 (test.py에서는 같은 로직을 직접 구현) |
-
-### 주요 하이퍼파라미터 (`Rec4Mit.__init__` 기본값)
-
-| 인자 | 기본값 | 의미 |
-|---|---|---|
-| `k` | 20 | 잠재 사건 개수 |
-| `ctx_len` | 4 | 컨텍스트 길이 (최근 뉴스 개수) |
-| `v_dim` | 256 | 뉴스 벡터 차원 |
-| `e_dim` | 128 | 사건 / 진위 표현 차원 |
-| `user_dim` | 128 | 사용자 임베딩 차원 |
-
----
-
-## 6. 학습 (`train.py`)
-
-```bash
-python train.py --data {pol|gossip} --fold_num N
-```
-
-| 인자 | 기본값 | 설명 |
-|---|---|---|
-| `--data` | `pol` | 데이터셋 선택 |
-| `--fold_num` | `1` | **학습할 fold 개수**. `N`이면 fold `0 ~ N-1`을 순서대로 학습 |
-
-### 동작 방식
-
-1. `news.csv` 행 순서대로 뉴스 내부번호를 매김 (0은 패딩, 1부터 시작)
-2. fold 0의 train/val/test 전체에서 사용자 집합을 만들어 정렬 후 인덱스 부여 → `u2i`
-3. **정답 뉴스가 진짜(label 0)인 인스턴스만 학습에 사용**
-4. 컨텍스트는 최근 4개, 부족하면 왼쪽 패딩 + 마스크
-5. 후보 구성: 정답 1개 + 네거티브 64개 (진짜 32 + 가짜 32 무작위 추출)
-6. 손실 = 추천 BCE (정답 후보만 1) + 컨텍스트 분리 손실 + 후보 분리 손실 (Eq 21~22)
-7. Adam, lr 1e-3, batch 64, 15 epoch
-8. 매 epoch 검증 손실을 계산해 **가장 낮을 때** `model_dir/{data}/fold_{k}.pth` 저장
-
-> `best`는 fold 루프 바깥에서 한 번만 초기화됩니다. 여러 fold를 연속 학습할 때 이전 fold보다 검증 손실이 낮아져야 다음 fold의 체크포인트가 저장됩니다. fold마다 독립적으로 저장하려면 `best = float("inf")`를 fold 루프 안으로 옮기세요.
-
----
-
-## 7. 평가 (`test.py`)
-
-```bash
-python test.py --data {pol|gossip} --batch 32
-```
-
-| 인자 | 기본값 | 설명 |
-|---|---|---|
-| `--data` | `pol` | 데이터셋 선택 |
-| `--batch` | `32` | 평가 배치 크기. gossip은 후보 뉴스가 17,527개라 메모리에 맞춰 줄이는 것을 권장 |
-
-### 동작 방식
-
-1. `model_dir/{data}/fold_*.pth`를 모두 찾아 fold별로 평가
-2. 후보 = **전체 뉴스 풀** (훈련 때와 달리 샘플링 없음)
-3. 후보는 한 번만 인코딩해 재사용
-4. 진위 디코더가 가짜라고 판단한(σ(로짓) ≥ 0.5) 후보는 점수에서 1e4를 빼서 사실상 제외
-5. top-20 안에서 아래 지표를 K = 5, 10, 20에 대해 계산
-6. fold 전체 평균 ± 표준편차 출력
-
-### 지표
-
-| 지표 | 의미 |
-|---|---|
-| `REC@K` | 정답 뉴스가 top-K 안에 있으면 1 (Hit Rate) |
-| `MRR@K` | 정답 순위의 역수 |
-| `NDCG@K` | 1 / log₂(순위 + 1) |
-| `RT@K` | top-K 중 **진짜 뉴스 비율** (가짜뉴스 완화 효과 측정) |
-
-출력 예시:
-
-```
-학습된 fold: [0]
-fold0: REC@5 0.xxxx REC@20 0.xxxx | MRR@5 0.xxxx | NDCG@5 0.xxxx | RT@5 0.xxxx
-
-=== [pol] 1-fold 평균 ± 표준편차 ===
-REC@5    0.xxxx ± 0.0000
-...
-```
-
----
-
-## 8. 데이터 통계
-
-| 항목 | PolitiFact (`pol`) | GossipCop (`gossip`) |
-|---|---|---|
-| 뉴스 수 | 599 | 17,527 |
-| 진짜 / 가짜 | 280 / 319 | 13,120 / 4,407 |
-| 사용자 수 | 162,262 | 251,681 |
-| 열람 기록 수 | 256,380 | 1,106,623 |
-| 학습 인스턴스 (전체) | 47,464 | 136,004 |
-| fold 하나의 train / val / test | 37,970 / 4,747 / 4,747 | 108,802 / 13,601 / 13,601 |
-
----
-
-## 9. 참고 사항 및 주의점
-
-- **뉴스 내부번호 규칙**: `news.csv` 행 순서 = 임베딩 행 순서 = 내부번호 − 1. 0번은 패딩입니다. CSV 순서를 바꾸면 임베딩과 어긋나므로 주의하세요.
-- **사용자 인덱스 규칙**: 학습과 평가 모두 fold 0의 전체 사용자 집합을 정렬해 인덱스를 만듭니다. 결정적이므로 두 스크립트가 같은 `u2i`를 얻습니다.
-- **정답이 가짜인 인스턴스 제외**: 학습·평가 모두 정답 뉴스가 진짜인 인스턴스만 사용합니다. 가짜뉴스는 추천 대상이 아니기 때문입니다.
-- **`layer2.py`의 `from mpmath import sigmoid`**: 사용되지 않는 import입니다. `mpmath`가 없는 환경이면 지워도 됩니다.
-- **OpenMP 중복 경고** (Windows): `OMP: Error #15`가 뜨면 환경변수 `KMP_DUPLICATE_LIB_OK=TRUE`를 설정하면 넘어갈 수 있습니다.
+└── model_dir/{data}/fold_{n}.pth # 학습 가중치 저장소</code></pre>
+
+<hr>
+
+<h2 align="center" id="dataset">데이터셋</h2>
+
+<table align="center">
+  <tr>
+    <th>항목</th>
+    <th>PolitiFact (<code>pol</code>)</th>
+    <th>GossipCop (<code>gossip</code>)</th>
+  </tr>
+  <tr><td>뉴스 수</td><td align="right">599</td><td align="right">17,527</td></tr>
+  <tr><td>진짜 / 가짜</td><td align="right">280 / 319</td><td align="right">13,120 / 4,407</td></tr>
+  <tr><td>사용자 수</td><td align="right">162,262</td><td align="right">251,681</td></tr>
+  <tr><td>열람 기록 수</td><td align="right">256,380</td><td align="right">1,106,623</td></tr>
+  <tr><td>학습 인스턴스</td><td align="right">47,464</td><td align="right">136,004</td></tr>
+</table>
+
+<h3 align="center">뉴스 속성</h3>
+
+<table align="center">
+  <tr><th>컬럼</th><th>설명</th></tr>
+  <tr><td><code>news_id</code></td><td>뉴스 고유 ID</td></tr>
+  <tr><td><code>title</code></td><td>제목</td></tr>
+  <tr><td><code>description</code></td><td>본문 요약</td></tr>
+  <tr><td><code>label</code></td><td><code>0</code> = 진짜, <code>1</code> = 가짜</td></tr>
+  <tr><td><code>user_ids</code></td><td>이 뉴스를 공유한 사용자 ID 리스트</td></tr>
+  <tr><td><code>user_times</code></td><td>각 사용자의 공유 시각 리스트</td></tr>
+</table>
+
+<hr>
+
+<h2 align="center" id="model">모델</h2>
+
+<pre><code>뉴스 ID ──► [Layer 1] 임베딩 ──► [Layer 2] 인코더 ──┬─► 사건 표현 e (128)
+                                                    └─► 진위 표현 l (128) ─► 가짜 확률
+
+컨텍스트 e ──► [Layer 3] 사건 감지 ─► 사건 전이 R ─► 사용자 결합 c_u ─► 후보 점수</code></pre>
+
+<details>
+<summary><b>Layer 1 · 임베딩 (<code>Model/layer1.py</code>)</b></summary>
+<br>
+<table>
+  <tr><th>구성</th><th>설명</th></tr>
+  <tr><td><code>init_emb</code></td><td>제목·본문 임베딩을 이어 붙여 <code>(N+1, 1536)</code> 행렬 생성. 0번 행은 패딩</td></tr>
+  <tr><td><code>EmbeddingLayer</code></td><td>학습 가능한 ID 임베딩(128) + BERT 메타 임베딩(1536) → 뉴스 벡터 <code>v</code> (256)</td></tr>
+</table>
+</details>
+
+<details>
+<summary><b>Layer 2 · 분리 (<code>Model/layer2.py</code>)</b></summary>
+<br>
+<table>
+  <tr><th>구성</th><th>입력 → 출력</th><th>설명</th></tr>
+  <tr><td><code>Encoder</code></td><td>256 → 256</td><td>3단 Dense + skip-connection, LeakyReLU(0.1)</td></tr>
+  <tr><td><code>EventDecoder</code></td><td>256 → 128</td><td>사건 표현 <code>e</code></td></tr>
+  <tr><td><code>VeracityDecoder</code></td><td>256 → 128 + 로짓</td><td>진위 표현 <code>l</code>과 가짜 여부 로짓 (Eq 8)</td></tr>
+  <tr><td><code>DisentangleLoss</code></td><td></td><td>아래 세 손실 계산</td></tr>
+</table>
+</details>
+
+<details>
+<summary><b>Layer 3 · 사건 전이와 추천 (<code>Model/layer3.py</code>)</b></summary>
+<br>
+<table>
+  <tr><th>구성</th><th>설명</th></tr>
+  <tr><td><code>EventDetector</code></td><td><code>e</code>를 K=20개 잠재 사건으로 소프트 분배 (Eq 13~14)</td></tr>
+  <tr><td><code>EventTransitionNet.build_R</code></td><td>위치 임베딩 + attention으로 컨텍스트를 요약해 사건 전이 행렬 <code>R</code> 생성 (Eq 15~16)</td></tr>
+  <tr><td><code>EventTransitionNet.activate</code></td><td>후보와 <code>R</code> 사이 attention → 문맥 벡터 → 사용자 임베딩과 결합해 <code>c_u</code> (Eq 17~19)</td></tr>
+  <tr><td><code>NextNewsPredictor</code></td><td>점수 = <code>c_u · e_t</code> (Eq 20)</td></tr>
+</table>
+</details>
+
+<h3 align="center">손실</h3>
+
+<table align="center">
+  <tr><th>손실</th><th>식</th><th>의미</th></tr>
+  <tr><td><code>L_r</code></td><td>½‖[e ; l] − v‖²</td><td>두 표현을 합치면 원래 벡터가 복원돼야 함 (Eq 9)</td></tr>
+  <tr><td><code>L_l</code></td><td>BCE(로짓, y)</td><td>진위 표현으로 가짜 여부를 맞춰야 함 (Eq 10)</td></tr>
+  <tr><td><code>L_a</code></td><td>1 / BCE(Dense(e), y)</td><td>사건 표현으로는 진위를 <b>못 맞춰야</b> 함 (Eq 11)</td></tr>
+</table>
+
+> [!IMPORTANT]
+> 현재 코드는 `L_l`만 최종 손실에 포함합니다. `L_a`가 오히려 모델 점수를 많이 낮춰서 뺐습니다.
+>
+> 학습 후보는 정답 1개 + 네거티브 64개 (진짜 32 + 가짜 32) 입니다. 논문은 네거티브 4개 (진짜 2 + 가짜 2) 라 차이가 있습니다.
+> 논문보다 뉴스를 많이 사용해서 정답 맞추기가 더 어렵기 때문에 네거티브 개수를 높였습니다.
+
+<h3 align="center">하이퍼파라미터 (<code>Rec4Mit</code> 기본값)</h3>
+
+<table align="center">
+  <tr><th>인자</th><th>값</th><th>의미</th></tr>
+  <tr><td><code>k</code></td><td align="right">20</td><td>잠재 사건 개수</td></tr>
+  <tr><td><code>ctx_len</code></td><td align="right">4</td><td>컨텍스트 길이</td></tr>
+  <tr><td><code>v_dim</code></td><td align="right">256</td><td>뉴스 벡터 차원</td></tr>
+  <tr><td><code>e_dim</code></td><td align="right">128</td><td>사건 / 진위 표현 차원</td></tr>
+  <tr><td><code>user_dim</code></td><td align="right">128</td><td>사용자 임베딩 차원</td></tr>
+</table>
+
+<hr>
+
+<h2 align="center">평가 지표</h2>
+
+<table align="center">
+  <tr><th>지표</th><th>의미</th></tr>
+  <tr><td><code>REC@K</code></td><td>정답이 top-K 안에 있으면 1</td></tr>
+  <tr><td><code>MRR@K</code></td><td>정답 순위의 역수</td></tr>
+  <tr><td><code>NDCG@K</code></td><td>1 / log₂(순위 + 1)</td></tr>
+  <tr><td><code>RT@K</code></td><td>top-K 중 <b>진짜 뉴스 비율</b></td></tr>
+</table>
+
+<p align="center">K = 5, 10, 20 에 대해 계산하고 fold 평균 ± 표준편차를 출력합니다.</p>
