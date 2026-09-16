@@ -20,30 +20,7 @@ Rec4Mit은 사용자의 최근 뉴스 열람 이력을 보고 <b>다음에 읽�
 
 <hr>
 
-<h2 align="center">특징</h2>
-
-<table align="center">
-  <tr>
-    <td><b>분리 표현 학습</b></td>
-    <td>뉴스 하나를 사건 표현과 진위 표현으로 나눠 학습합니다</td>
-  </tr>
-  <tr>
-    <td><b>사건 전이 추적</b></td>
-    <td>최근 4개 뉴스의 사건 흐름을 attention으로 요약해 다음 사건을 예측합니다</td>
-  </tr>
-  <tr>
-    <td><b>가짜뉴스 필터링</b></td>
-    <td>진위 디코더가 가짜로 판단한 후보는 추천에서 제외합니다</td>
-  </tr>
-  <tr>
-    <td><b>10-fold 평가</b></td>
-    <td>REC, MRR, NDCG, RT(진짜 뉴스 비율) 지표로 fold 평균을 냅니다</td>
-  </tr>
-  <tr>
-    <td><b>한 줄 전처리</b></td>
-    <td>뉴스 CSV 2개만 있으면 명령 하나로 데이터가 전부 생성됩니다</td>
-  </tr>
-</table>
+![alt text](image.png)
 
 <hr>
 
