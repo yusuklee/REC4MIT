@@ -9,9 +9,7 @@
 <img alt="Dataset" src="https://img.shields.io/badge/Dataset-FakeNewsNet-4B5563?style=for-the-badge">
 </p>
 
-<p align="center">
-<a href="#quick-start">빠른 시작</a> · <a href="#structure">폴더 구조</a> · <a href="#dataset">데이터셋</a> · <a href="#model">모델</a> · <a href="https://github.com/KaiDMML/FakeNewsNet" target="_blank">FakeNewsNet</a>
-</p>
+
 
 <p align="center">
 Rec4Mit은 사용자의 최근 뉴스 열람 이력을 보고 <b>다음에 읽을 뉴스를 추천</b>합니다.<br>
