@@ -4,7 +4,7 @@ from collections import defaultdict
 import numpy as np
 
 p = argparse.ArgumentParser()
-p.add_argument("--data", default="pol", choices=["gossip","pol"])
+p.add_argument("--data", default="gossip", choices=["gossip","pol"])
 ar = p.parse_args()
 
 

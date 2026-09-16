@@ -39,8 +39,8 @@ class FoldSet(Dataset):
         seq = [0] * pad + ids  # 왼쪽 패딩
         mask = [False] * pad + [True] * len(ids)
 
-        neg = np.concatenate([np.random.choice(real_pool, 2),  # 진짜2 + 가짜2
-                              np.random.choice(fake_pool, 2)])
+        neg = np.concatenate([np.random.choice(real_pool, 32),  # 진짜32 + 가짜32
+                              np.random.choice(fake_pool, 32)])
 
         cand = [name2idx[tgt]] + neg.tolist()  # 정답후보 진짜만
 
@@ -59,8 +59,8 @@ def evaluate(model, dl, dev):
         logits, ctx, cd = model(seq, cand, u, mask)
         target = torch.zeros_like(logits);
         target[:, 0] = 1
-        loss = F.binary_cross_entropy_with_logits(logits, target) \
-               + model.dis_loss(*ctx, y_s, mask)[0] + model.dis_loss(*cd, y_c)[0]
+        loss = loss = loss = F.binary_cross_entropy_with_logits(logits, target) \
+        + model.dis_loss(*ctx, y_s, mask)[0] + model.dis_loss(*cd, y_c)[0]
         tot += loss.item() * seq.size(0);
         n += seq.size(0)
     model.train()
@@ -93,7 +93,7 @@ for fold in range(fold_num):
     va = DataLoader(FoldSet(f"DataPreperation/datas/folds/{DATA}/{fold}/val.json", u2i),
                     batch_size=64)
 
-
+                                                               
     model = Rec4Mit(init_matrix, num_users=len(u2i), ctx_len=4).to(dev)
     opt = torch.optim.Adam(model.parameters(), lr=1e-3)
 
@@ -107,10 +107,13 @@ for fold in range(fold_num):
             logits, ctx, cd = model(seq, cand, u, mask)
             target = torch.zeros_like(logits);
             target[:, 0] = 1
-            loss_p = F.binary_cross_entropy_with_logits(logits, target,reduction="none").sum(-1).mean()  # Eq 21
+            loss_p = F.binary_cross_entropy_with_logits(logits, target,reduction="none").mean()
+
+
+
             loss_d = model.dis_loss(*ctx, y_s, mask)[0] + model.dis_loss(*cd, y_c)[0]
 
-            (loss_p + loss_d).backward()  # Eq 22
+            (loss_p  + loss_d).backward()  # Eq 22 선호도 추천을 잘못해서 수정
             opt.step();
             opt.zero_grad()
             tot += (loss_p + loss_d).item()
