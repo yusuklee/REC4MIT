@@ -2,7 +2,7 @@ import argparse
 import json, torch, torch.nn.functional as F
 import numpy as np, pandas as pd
 from torch.utils.data import Dataset, DataLoader
-from main import Rec4Mit
+from rec4mit import Rec4Mit
 from Model.layer1 import init_emb
 import os
 

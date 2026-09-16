@@ -1,11 +1,9 @@
-import os
-import sys
-import torch
 import torch.nn as nn
-
 from Model.layer1 import EmbeddingLayer
 from Model.layer2 import Encoder,EventDecoder,VeracityDecoder,DisentangleLoss
 from Model.layer3 import EventDetector,EventTransitionNet,NextNewsPredictor
+
+#layer1, layer2, layer3 를 전부 연결한 코드
 
 
 

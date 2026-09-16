@@ -1,11 +1,9 @@
 """
-Rec4Mit 데이터 전처리 통합 파이프라인
+Rec4Mit 데이터 전처리
   1) interaction : 뉴스 CSV -> 사용자별 시간순 열람 시퀀스
   2) instance    : 시퀀스 -> 학습 인스턴스 + 10-fold 분할
   3) emb         : 뉴스 제목·본문 -> BERT 임베딩
 
-  python DataPreperation/dataPipeline.py
-  python DataPreperation/dataPipeline.py --data pol --steps interaction instance
 """
 import argparse
 import ast

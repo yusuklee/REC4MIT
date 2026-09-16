@@ -1,6 +1,6 @@
 import argparse, glob, json, re
 import numpy as np, pandas as pd, torch
-from main import Rec4Mit
+from rec4mit import Rec4Mit
 from Model.layer1 import init_emb
 
 p = argparse.ArgumentParser()
