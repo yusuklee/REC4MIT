@@ -1,9 +1,9 @@
 <h1 align="center">Rec4Mit</h1>
 
 <p align="center">가짜뉴스 확산을 완화하는 뉴스 추천 모델 <b>PyTorch</b> 구현.</p>
-논문 -> c:\Users\USER\Desktop\졸프_데이터\논문\11_[WWW'22] Veracity-aware and Event-driven Personalized News Recommendation for Fake News Mitigation.pdf
 
 <p align="center">
+<a href="https://doi.org/10.1145/3485447.3512263" target="_blank"><img alt="Paper" src="https://img.shields.io/badge/Paper-WWW%2722-B31B1B?style=for-the-badge&logo=acm&logoColor=white"></a>
 <img alt="Python" src="https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white">
 <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.10-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white">
 <img alt="Dataset" src="https://img.shields.io/badge/Dataset-FakeNewsNet-4B5563?style=for-the-badge">
