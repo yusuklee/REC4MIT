@@ -35,10 +35,7 @@ REC4MIT/
 │   └── layer3.py                 # 사건 감지 / 사건 전이 / 다음 뉴스 예측
 │
 ├── DataPreperation/
-│   ├── dataPipeline.py           # 아래 3개 스크립트를 순서대로 실행하는 통합 파이프라인
-│   ├── make_emb.py               # 뉴스 제목·본문 → BERT 임베딩 (.npz)
-│   ├── make_interaction.py       # 뉴스 CSV → 사용자별 열람 시퀀스 (.json)
-│   ├── interaction2instance.py   # 시퀀스 → 학습 인스턴스 + 10-fold 분할
+│   ├── dataPipeline.py           # 데이터 전처리 통합 파이프라인 (시퀀스 → 인스턴스/fold → 임베딩)
 │   └── datas/
 │       ├── news/                 # 원본 뉴스 CSV (gossip.csv, pol.csv)  ※ git 제외
 │       ├── emb/                  # BERT 임베딩 (gossip.npz, pol.npz)     ※ git 제외
@@ -63,7 +60,7 @@ REC4MIT/
 | torch | 2.10.0 (cu128) | 모델 학습·추론 |
 | numpy | 2.3.5 | 수치 연산 |
 | pandas | 2.3.3 | CSV 처리 |
-| sentence-transformers | 5.6.0 | BERT 임베딩 생성 (`make_emb.py`에서만 사용) |
+| sentence-transformers | 5.6.0 | BERT 임베딩 생성 (`dataPipeline.py`의 emb 단계에서만 사용) |
 
 ### 설치
 
@@ -98,7 +95,7 @@ python test.py --data gossip --batch 16     # gossip은 뉴스 풀이 커서 배
 
 ## 4. 데이터 파이프라인
 
-`dataPipeline.py` 하나로 아래 3단계를 순서대로 실행합니다. 개별 스크립트(`make_interaction.py`, `interaction2instance.py`, `make_emb.py`)도 그대로 남아 있으며, 이 셋은 `DataPreperation/` 안에서 실행해야 합니다.
+`dataPipeline.py` 하나로 아래 3단계를 순서대로 실행합니다. 어느 위치에서 실행해도 되며, 경로는 파일 위치 기준으로 잡힙니다.
 
 | 인자 | 기본값 | 설명 |
 |---|---|---|
@@ -116,21 +113,7 @@ python test.py --data gossip --batch 16     # gossip은 뉴스 풀이 커서 배
 | `user_ids` | 해당 뉴스를 공유한 사용자 ID 리스트 (문자열로 저장된 파이썬 리스트) |
 | `user_times` | 각 사용자의 공유 시각 리스트 (`user_ids`와 순서 일치) |
 
-### 4-2. `make_emb.py` — 뉴스 텍스트 임베딩
-
-- 모델: `bert-base-uncased` (sentence-transformers)
-- 제목은 최대 32 토큰, 본문은 최대 128 토큰으로 잘라서 인코딩
-- 제목이 비어 있으면 `"unknown news"`로 대체
-- 본문 길이가 5자 이하이면 0 벡터 처리
-- 출력: `datas/emb/{data}.npz`
-
-| 키 | 형태 | 설명 |
-|---|---|---|
-| `news_id` | `(N,)` | 뉴스 ID (CSV 행 순서와 동일) |
-| `title` | `(N, 768)` | 제목 임베딩 (L2 정규화) |
-| `description` | `(N, 768)` | 본문 임베딩 (L2 정규화) |
-
-### 4-3. `make_interaction.py` — 사용자별 열람 시퀀스
+### 4-2. `make_interaction()` — 사용자별 열람 시퀀스 (interaction 단계)
 
 CSV의 `user_ids`·`user_times`를 풀어서 **사용자 → 시간순 뉴스 ID 리스트**로 재구성합니다.
 
@@ -140,7 +123,7 @@ CSV의 `user_ids`·`user_times`를 풀어서 **사용자 → 시간순 뉴스 ID
 
 출력: `datas/user_interaction/{data}_user_interaction.json`
 
-### 4-4. `interaction2instance.py` — 학습 인스턴스 및 10-fold 분할
+### 4-3. `interaction2instance()` — 학습 인스턴스 및 10-fold 분할 (instance 단계)
 
 각 사용자 시퀀스에서 **슬라이딩 윈도우**로 인스턴스를 만듭니다.
 
@@ -159,6 +142,20 @@ CSV의 `user_ids`·`user_times`를 풀어서 **사용자 → 시간순 뉴스 ID
 - 시드 3으로 섞은 뒤 10등분
 - fold `k`: 청크 `k` = test, 청크 `(k+1)%10` = val, 나머지 8개 = train
 - 출력: `datas/folds/{data}/{k}/{train,val,test}.json`
+
+### 4-4. `make_emb()` — 뉴스 텍스트 임베딩 (emb 단계)
+
+- 모델: `bert-base-uncased` (sentence-transformers)
+- 제목은 최대 32 토큰, 본문은 최대 128 토큰으로 잘라서 인코딩
+- 제목이 비어 있으면 `"unknown news"`로 대체
+- 본문 길이가 5자 이하이면 0 벡터 처리
+- 출력: `datas/emb/{data}.npz`
+
+| 키 | 형태 | 설명 |
+|---|---|---|
+| `news_id` | `(N,)` | 뉴스 ID (CSV 행 순서와 동일) |
+| `title` | `(N, 768)` | 제목 임베딩 (L2 정규화) |
+| `description` | `(N, 768)` | 본문 임베딩 (L2 정규화) |
 
 ---
 
@@ -307,6 +304,5 @@ REC@5    0.xxxx ± 0.0000
 - **뉴스 내부번호 규칙**: `news.csv` 행 순서 = 임베딩 행 순서 = 내부번호 − 1. 0번은 패딩입니다. CSV 순서를 바꾸면 임베딩과 어긋나므로 주의하세요.
 - **사용자 인덱스 규칙**: 학습과 평가 모두 fold 0의 전체 사용자 집합을 정렬해 인덱스를 만듭니다. 결정적이므로 두 스크립트가 같은 `u2i`를 얻습니다.
 - **정답이 가짜인 인스턴스 제외**: 학습·평가 모두 정답 뉴스가 진짜인 인스턴스만 사용합니다. 가짜뉴스는 추천 대상이 아니기 때문입니다.
-- **전처리 스크립트 실행 위치**: `dataPipeline.py`는 어디서 실행해도 됩니다. 개별 스크립트 3개는 상대경로 `datas/...`를 사용하므로 `DataPreperation/` 안에서 실행해야 합니다.
 - **`layer2.py`의 `from mpmath import sigmoid`**: 사용되지 않는 import입니다. `mpmath`가 없는 환경이면 지워도 됩니다.
 - **OpenMP 중복 경고** (Windows): `OMP: Error #15`가 뜨면 환경변수 `KMP_DUPLICATE_LIB_OK=TRUE`를 설정하면 넘어갈 수 있습니다.
