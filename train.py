@@ -8,7 +8,7 @@ import os
 
 
 p = argparse.ArgumentParser()
-p.add_argument("--data", default="pol", choices=["gossip","pol"])
+p.add_argument("--data", default="gossip", choices=["gossip","pol"])
 p.add_argument("--fold_num", default=1, type=int, choices=list(range(1,11)))       # 0~9 까지
 ar = p.parse_args()
 DATA= ar.data
@@ -39,8 +39,8 @@ class FoldSet(Dataset):
         seq = [0] * pad + ids  # 왼쪽 패딩
         mask = [False] * pad + [True] * len(ids)
 
-        neg = np.concatenate([np.random.choice(real_pool, 32),  # 진짜32 + 가짜32
-                              np.random.choice(fake_pool, 32)])
+        neg = np.concatenate([np.random.choice(real_pool, 2),  # 진짜2 가짜2
+                              np.random.choice(fake_pool, 2)])
 
         cand = [name2idx[tgt]] + neg.tolist()  # 정답후보 진짜만
 

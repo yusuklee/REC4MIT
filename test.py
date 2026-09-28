@@ -4,7 +4,7 @@ from rec4mit import Rec4Mit
 from Model.layer1 import init_emb
 
 p = argparse.ArgumentParser()
-p.add_argument("--data", default="pol", choices=["gossip", "pol"])
+p.add_argument("--data", default="gossip", choices=["gossip", "pol"])
 p.add_argument("--batch", default=32, type=int)      # gossip은 후보가 많아 줄여야 함
 ar = p.parse_args()
 DATA = ar.data

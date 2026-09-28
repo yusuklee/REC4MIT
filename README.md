@@ -160,10 +160,30 @@ python test.py --data gossip --batch 32        # --batch 기본값 32</code></pr
 </table>
 
 > [!IMPORTANT]
-> 현재 코드는 `L_l`만 최종 손실에 포함합니다. `L_a`가 오히려 모델 점수를 많이 낮춰서 뺐습니다.
->
-> 학습 후보는 정답 1개 + 네거티브 64개 (진짜 32 + 가짜 32) 입니다. 논문은 네거티브 4개 (진짜 2 + 가짜 2) 라 차이가 있습니다.
-> 논문보다 뉴스를 많이 사용해서 정답 맞추기가 더 어렵기 때문에 네거티브 개수를 높였습니다.
+> 학습 후보는 정답 1개 + 네거티브 4개 (진짜 2 + 가짜 2) 입니다.
+
+<h3 align="center"><code>L_a</code> 포함 여부 비교</h3>
+
+<table align="center">
+  <tr>
+    <th align="center">L_a 포함</th>
+    <th align="center">L_a 제외</th>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><b>Train</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="imgs/with_loss_train.png" width="100%"></td>
+    <td align="center"><img src="imgs/without_loss_train.png" width="100%"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><b>Test</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="imgs/with_loss_test.png" width="100%"></td>
+    <td align="center"><img src="imgs/without_loss_test.png" width="100%"></td>
+  </tr>
+</table>
 
 <h3 align="center">하이퍼파라미터 (<code>Rec4Mit</code> 기본값)</h3>
 
