@@ -13,34 +13,30 @@ class EventDetector(nn.Module):
         return beta,e_split
 
 
-
-
 class EventTransitionNet(nn.Module):
-    def __init__(self, e_dim=128, events =20, ctx_len=4, pos_dim=32, attn_dim=64, user_dim=128):
-        # F (4,160) 형태
+    def __init__(self, e_dim=128, events=20, ctx_len=4, pos_dim=32, attn_dim=64, user_dim=128):
         super().__init__()
+        self.W2 = nn.Linear(e_dim + pos_dim, attn_dim)
+        self.W3 = nn.Linear(attn_dim, 1, bias=False)
+        self.W4 = nn.Linear(e_dim + user_dim, e_dim)
         self.pos_emb = nn.Embedding(ctx_len, pos_dim)
-        self.W2 = nn.Linear(e_dim +pos_dim, attn_dim)
-        self.W3  =nn.Linear(attn_dim, 1, bias=False)
-        self.W4 = nn.Linear(e_dim+user_dim,e_dim)
 
     def build_R(self, e, e_split, pad_mask=None):
-        
-        batch, ctx_len, _ = e.shape
-        p = self.pos_emb(torch.arange(ctx_len, device=e.device))        # [L,32]
-        f = torch.cat([e, p.unsqueeze(0).expand(batch, -1, -1)], -1)  # f_i = [e_i ; p_i]
-
-        gamma = self.W3(torch.tanh(self.W2(f))).squeeze(-1)       # Eq 15공식
-        
+        b, ctx, _ = e.shape
+        p = self.pos_emb.weight
+        f = torch.cat([e, p.unsqueeze(0).expand(b, -1, -1)], -1)
+        gamma = self.W3(torch.tanh(self.W2(f))).squeeze(-1)
         if pad_mask is not None:
-            gamma = gamma.masked_fill(~pad_mask, -1e9)            # 패딩 자리 제외
-        gamma = F.softmax(gamma, dim=-1)                          # [B,L]
-        R = torch.einsum("bl,blkd->bkd", gamma, e_split)          # Eq 16
-        return R, gamma
+            gamma = gamma.masked_fill(~pad_mask, -1e9)
+        gamma = F.softmax(gamma, dim=-1)
+
+        R = torch.einsum("bl,blkd->bkd", gamma, e_split)
+
+        return R,gamma
 
     def activate(self, R, e_t, u):
 
-        delta = F.softmax(torch.einsum("bkd,bcd->bck", R, e_t), -1)   # Eq 17
+        delta = F.softmax(torch.bmm(e_t, R.transpose(1, 2)), -1)
         c = torch.einsum("bck,bkd->bcd", delta, R)                    # Eq 18
         u = u.unsqueeze(1).expand(-1, c.size(1), -1)
         c_u = torch.tanh(self.W4(torch.cat([c, u], -1)))              # Eq 19

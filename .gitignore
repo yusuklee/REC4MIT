@@ -10,3 +10,5 @@ __pycache__/
 
 # IDE
 .idea/
+model_dir/
+DataPreperation/datas/

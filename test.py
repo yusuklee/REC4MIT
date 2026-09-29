@@ -1,11 +1,13 @@
-import argparse, glob, json, re
+import argparse, glob, json, os, re
 import numpy as np, pandas as pd, torch
 from rec4mit import Rec4Mit
 from Model.layer1 import init_emb
 
 p = argparse.ArgumentParser()
-p.add_argument("--data", default="gossip", choices=["gossip", "pol"])
+p.add_argument("--data", default="pol", choices=["gossip", "pol"])
 p.add_argument("--batch", default=32, type=int)      # gossip은 후보가 많아 줄여야 함
+p.add_argument("--date", default=None)                 # 날짜 폴더명. 없으면 가장 최근
+p.add_argument("--fold", type=int, nargs="+", default=None)   # 평가할 fold. 없으면 fold_0
 ar = p.parse_args()
 DATA = ar.data
 dev = "cuda" if torch.cuda.is_available() else "cpu"
@@ -26,9 +28,10 @@ init_matrix = init_emb(f"DataPreperation/datas/emb/{DATA}.npz",
                      f"DataPreperation/datas/news/{DATA}.csv")
 TOPK = [5, 10, 20]
 
-folds = sorted(int(re.search(r"fold_(\d+)\.pth", f).group(1))
-             for f in glob.glob(f"model_dir/{DATA}/fold_*.pth"))
-print(f"학습된 fold: {folds}")
+dates = sorted(d for d in os.listdir(f"model_dir/{DATA}") if os.path.isdir(f"model_dir/{DATA}/{d}"))
+DATE = ar.date if ar.date is not None else dates[-1]
+folds = ar.fold if ar.fold is not None else [0]
+print(f"run {DATE}, 평가 fold: {folds}")
 
 
 def load_test(fold):
@@ -83,7 +86,7 @@ def evaluate(model, xs, ys, us):
 agg = []
 for fold in folds:
   model = Rec4Mit(init_matrix, num_users=len(u2i), ctx_len=4).to(dev)
-  model.load_state_dict(torch.load(f"model_dir/{DATA}/fold_{fold}.pth", map_location=dev))
+  model.load_state_dict(torch.load(f"model_dir/{DATA}/{DATE}/fold_{fold}.pth", map_location=dev)["state_dict"])
 
   xs, ys, us = load_test(fold)
   hr, mrr, nd, rt = evaluate(model, xs, ys, us)

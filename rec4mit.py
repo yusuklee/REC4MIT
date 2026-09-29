@@ -12,9 +12,9 @@ class Rec4Mit(nn.Module):
                  v_dim=256, e_dim=128, user_dim=128):
         super().__init__()
         self.embedding = EmbeddingLayer(init_emb, out_dim=v_dim)
-        self.encoder = Encoder(v_dim, v_dim)
-        self.event_dec = EventDecoder(v_dim, e_dim)
-        self.veracity_dec = VeracityDecoder(v_dim, e_dim)
+        self.encoder = Encoder(in_dim=v_dim, h_dim=v_dim)
+        self.event_dec = EventDecoder(in_dim=v_dim, h_dim=e_dim)
+        self.veracity_dec = VeracityDecoder(in_dim=v_dim, h_dim=e_dim)
         self.detector = EventDetector(e_dim, k)
         self.transition = EventTransitionNet(e_dim, k, ctx_len, user_dim=user_dim)
         self.predictor = NextNewsPredictor()

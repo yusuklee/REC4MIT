@@ -8,7 +8,7 @@ import os
 
 
 p = argparse.ArgumentParser()
-p.add_argument("--data", default="gossip", choices=["gossip","pol"])
+p.add_argument("--data", default="pol", choices=["gossip","pol"])
 p.add_argument("--fold_num", default=1, type=int, choices=list(range(1,11)))       # 0~9 까지
 ar = p.parse_args()
 DATA= ar.data
@@ -23,7 +23,7 @@ name2idx = {n: i + 1 for i, n in enumerate(news["news_id"].astype(str))}
 labels = np.concatenate([[0], news["label"].values])  # labels[내부번호]
 real_pool = np.where(labels[1:] == 0)[0] + 1
 fake_pool = np.where(labels[1:] == 1)[0] + 1
-
+                                                      
 
 class FoldSet(Dataset):
     def __init__(self, path, user2idx):
@@ -61,7 +61,7 @@ def evaluate(model, dl, dev):
         target[:, 0] = 1
         loss = loss = loss = F.binary_cross_entropy_with_logits(logits, target) \
         + model.dis_loss(*ctx, y_s, mask)[0] + model.dis_loss(*cd, y_c)[0]
-        tot += loss.item() * seq.size(0);
+        tot += loss.item() * seq.size(0)
         n += seq.size(0)
     model.train()
     return tot / n
@@ -82,15 +82,20 @@ u2i = {u: i for i, u in enumerate(sorted(all_users))}
 
 
 
-os.makedirs(f"model_dir/{DATA}", exist_ok=True)
+from datetime import datetime
+now = datetime.now().strftime("%Y_%m_%d_%H_%M")
+os.makedirs(f"model_dir/{DATA}/{now}", exist_ok=True)
 
-best = float("inf")
+
+
+
 for fold in range(fold_num):
+    best = float("inf")
     
 
     ds = FoldSet(f"DataPreperation/datas/folds/{DATA}/{fold}/train.json", u2i)
     dl = DataLoader(ds, batch_size=64, shuffle=True)
-    va = DataLoader(FoldSet(f"DataPreperation/datas/folds/{DATA}/{fold}/val.json", u2i),
+    val = DataLoader(FoldSet(f"DataPreperation/datas/folds/{DATA}/{fold}/val.json", u2i),
                     batch_size=64)
 
                                                                
@@ -105,7 +110,7 @@ for fold in range(fold_num):
             y_s, y_c = y_s.to(dev), y_c.to(dev)
 
             logits, ctx, cd = model(seq, cand, u, mask)
-            target = torch.zeros_like(logits);
+            target = torch.zeros_like(logits)
             target[:, 0] = 1
             loss_p = F.binary_cross_entropy_with_logits(logits, target,reduction="none").mean()
 
@@ -113,17 +118,22 @@ for fold in range(fold_num):
 
             loss_d = model.dis_loss(*ctx, y_s, mask)[0] + model.dis_loss(*cd, y_c)[0]
 
-            (loss_p  + loss_d).backward()  # Eq 22 선호도 추천을 잘못해서 수정
-            opt.step();
+            (loss_p  + loss_d).backward()  
+            opt.step()
             opt.zero_grad()
             tot += (loss_p + loss_d).item()
-        vl = evaluate(model, va, dev)
-
+        ts=tot/len(dl)
+        vl = evaluate(model, val, dev)
+        print(f"epoch {ep} 완료 train:{ts:.3f},   val:{vl:.3f}")
         if vl < best:
             best = vl
+            import copy
+            temp = copy.deepcopy(model.state_dict())
+    torch.save({"state_dict":temp, "val_loss":best}, f"model_dir/{DATA}/{now}/fold_{fold}.pth")
 
-            torch.save(model.state_dict(), f"model_dir/{DATA}/fold_{fold}.pth")
-        print(f"fold{fold} ep{ep} train {tot / len(dl):.4f} val {vl:.4f}")
+
+
+
 
 
 
